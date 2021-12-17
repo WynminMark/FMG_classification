@@ -4,8 +4,8 @@ Created on Mon Nov 15 16:11:01 2021
 
 @author: WeimyMark
 """
-
-import PZcalibration as pz
+import PZcalibration as PZ
+import time
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,37 +25,32 @@ plt.ylabel("Z")
 plt.show()
 '''
 
+def get_prss_timestamp(time_str):
+    timeArray = time.strptime(time_str, "%m-%d-%Y %H:%M:%S")
+    time_stamp = int(time.mktime(timeArray))
+    return time_stamp
 
-def zip_signal(signal, fs):
-    # input: FMG signal with a sample frequency of fs
-    # ouput: FMG signal with a sample frequency of 1
-    sig_len = len(signal)
-    win_len = round(fs*0.1/2)*2    # 平滑滤波窗宽
-    ave_sig = []    # 储存平滑后的信号
-    for i in range(win_len//2, sig_len - win_len//2):
-        ave_sig.append(sum(signal[i-win_len//2 : i+win_len//2])/win_len)
+
+def get_FMG_timestamp(time_str):
+    timeArray = time.strptime(time_str, "%Y-%m-%d %H:%M:%S,%f")
+    time_stamp = int(time.mktime(timeArray))
+    return time_stamp
+
+def FMG_P(FMG_path, pressure_path):
+    raw_FMG = pd.read_table(FMG_path, sep = ';', header = None)
+    pressure = PZ.read_pressure(pressure_path)
     
-    max_index = np.where(ave_sig == max(ave_sig))[0][0] # 最大值的索引
-    start_index = max_index % fs
-    
-    rsmp_sig = []# 储存降采样后的信号
-    for i in range(start_index, max_index+1, fs):
-        rsmp_sig.append(signal[i])
-    return rsmp_sig, np.where(ave_sig == max(ave_sig))
-
-raw_data = pd.read_table("D:\code\data\Z_P\s3-3.db", sep = ';', header = None)
-FMG = raw_data[6].values# 获得有效的一路压力信号
-
-rsmp_FMG, k = zip_signal(FMG, 1230)
-
-
-plt.figure()
-plt.plot(rsmp_FMG)
-plt.title("ramp_FMG")
-plt.show()
-
-
-
+    final_data = pd.DataFrame()
+    for i in range(pressure.shape[0]):
+        for j in range(raw_FMG.shape[0]):
+            if get_FMG_timestamp(raw_FMG[0][j]) == get_prss_timestamp(pressure['date'][i] + " " + pressure['time'][i]):
+                final_data = final_data.append({'time': pressure['time'][i],
+                                                'P/mmHg': pressure['pressure'][i],
+                                                'FMG': raw_FMG[6][j]},
+                                               ignore_index = True)
+                break
+    return final_data
+            
 
 
 

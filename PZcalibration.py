@@ -10,10 +10,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+import time
 
 def read_pressure(file_path):
     # input: handheld气压计软件保存的txt数据
-    # air pressure data in dataframe
+    # output: air pressure data in dataframe
     with open(file_path) as f:
         data = f.readlines()
     
@@ -72,60 +73,71 @@ def cal_z(R, w, C):
     return z
 
 
+def get_prss_timestamp(time_str):
+    timeArray = time.strptime(time_str, "%m-%d-%Y %H:%M:%S")
+    time_stamp = int(time.mktime(timeArray))
+    return time_stamp
+
+
+def get_FMG_timestamp(time_str):
+    timeArray = time.strptime(time_str, "%Y-%m-%d %H:%M:%S,%f")
+    time_stamp = int(time.mktime(timeArray))
+    return time_stamp
+
+def FMG_P_calibration(FMG_path, pressure_path):
+    raw_FMG = pd.read_table(FMG_path, sep = ';', header = None)
+    pressure = read_pressure(pressure_path)
+    
+    final_data = pd.DataFrame()
+    for i in range(pressure.shape[0]):
+        for j in range(raw_FMG.shape[0]):
+            if get_FMG_timestamp(raw_FMG[0][j]) == get_prss_timestamp(pressure['date'][i] + " " + pressure['time'][i]) - 1:
+                final_data = final_data.append({'time': pressure['time'][i],
+                                                'P/mmHg': pressure['pressure'][i],
+                                                'FMG': raw_FMG[6][j]},
+                                               ignore_index = True)
+                break
+    return final_data
+
+
 if __name__ == "__main__":
-    # 读FMG数据文件
-    raw_data = pd.read_table("D:\code\data\Z_P\s3-3.db", sep = ';', header = None)
-    FMG = raw_data[6].values# 获得有效的一路压力信号
-    rsmp_FMG, k = zip_signal(FMG, 1230)# 降采样到1Hz，与压力采样率对应
-    # 读压力数据
-    pressure = read_pressure("D:\code\data\Z_P\s3-3.txt")
-    P = pressure['pressure'].values
+    # 获得FMG-P数据
+    FMG_P_data = FMG_P_calibration(r"d:\code\data\iFMG_calibration\t1.db", r"d:\code\data\iFMG_calibration\t1.txt")
+    FMG = FMG_P_data['FMG'].values
+    P1 = FMG_P_data['P/mmHg'].values
     # 读LCR数据system output vs LCR meter
-    LCR_data = Z_P_calibration("D:\code\data\Z_P\s3-6.xlsx", "D:\code\data\Z_P\s3-6.txt")
+    LCR_data = Z_P_calibration(r"d:\code\data\iFMG_calibration\t4.xls", r"d:\code\data\iFMG_calibration\t4.txt")
     P2 = LCR_data['P/mmHg'].values
     Z = LCR_data['Z'].values
-    max_index = np.where(P2 == max(P2))
-    # 用LCR meter测量值计算
-    cal_FMG = []
-    for i in Z[0:30]:
-        j = 865048800/i     #310280136
-        cal_FMG.append(j)
-    
-    
+    R= LCR_data['Rs/kΩ'].values
+
     # 以下根据实际信号情况调整
+
+    max_FMG_index = np.where(P1 == max(P1))[0][0]
+    max_LCR_index = np.where(P2 == max(P2))[0][0]
+    
+    # 用LCR meter测量值计算
+    # 1KHz反馈阻抗328444
+    # 直流反馈阻抗330000
+    # 0.92665076 是传输前计算的比值0.9266U=output
+    cal_FMG = []
+    Rf = cal_z(330000, 2*math.pi*1000, 47e-12)
+    gen2 = 2**0.5
+    cons_c = 1000*4095/(1248*3300)
+    for i in range(max_LCR_index):
+        # j = (328444000/Z[i]) * 0.92665076    #310280136
+        j = (Rf*200/(gen2*Z[i]) + 1000)*cons_c
+        cal_FMG.append(j)
+
     plt.figure()
-    plt.plot(rsmp_FMG)
-    plt.title("FMG signal")
-    plt.show()
-    
-    plt.figure()
-    plt.plot(P)
-    plt.title("air pressure(mmHg)")
-    plt.show()
-    
-    max_P_index = np.where(P == max(P))
-    max_FMG_index = np.where(rsmp_FMG == max(rsmp_FMG))
-    print("P, FMG: ", max_P_index, max_FMG_index)
-    
-    plt.figure()
-    plt.plot(P[0:42], rsmp_FMG[0:42])
-    plt.title("system calibration")
-    plt.xlabel("pressure (mmHg)")
-    plt.ylabel("ADC values")
-    plt.show()
-    
-    
-    plt.figure()
-    plt.plot(P2[0:30], cal_FMG, label = "Z-->system output")
-    plt.plot(P[0:42], rsmp_FMG[0:42], label = "system output")
+    plt.plot(P2[0 : max_LCR_index], cal_FMG, label = "Z-->system output")
+    plt.plot(P1[0 : max_FMG_index], FMG[0 : max_FMG_index], label = "system output")
     plt.legend(["Z-->system output", "system output"])
     plt.title("Z-P")
     plt.xlabel("pressure (mmHg)")
     plt.ylabel("Z")
     plt.show()
-    
-    # print(cal_z(330000, 2*math.pi*1000, 47e-12))
-    
+
     
     
     
