@@ -84,29 +84,43 @@ def get_FMG_timestamp(time_str):
     time_stamp = int(time.mktime(timeArray))
     return time_stamp
 
-def FMG_P_calibration(FMG_path, pressure_path):
+def FMG_P_calibration(FMG_path, pressure_path, FMG_channel):
     raw_FMG = pd.read_table(FMG_path, sep = ';', header = None)
     pressure = read_pressure(pressure_path)
     
     final_data = pd.DataFrame()
+    '''
+    pressure_val = pressure['pressure'].values
+    temp_search_index = 0
+    max_search_index = np.where(pressure_val == max(pressure_val))[0][0] + 5
+    '''
+    FMG_timestamp_list = []
+    prss_timestamp_list = []
+
+    for i in range(pressure.shape[0]):
+        prss_timestamp_list.append(get_prss_timestamp(pressure['date'][i] + " " + pressure['time'][i]))
+
+    for i in range(raw_FMG.shape[0]):
+        FMG_timestamp_list.append(get_FMG_timestamp(raw_FMG[0][i]))
+
     for i in range(pressure.shape[0]):
         for j in range(raw_FMG.shape[0]):
-            if get_FMG_timestamp(raw_FMG[0][j]) == get_prss_timestamp(pressure['date'][i] + " " + pressure['time'][i]) - 1:
+            if FMG_timestamp_list[j] == prss_timestamp_list[i] - 1:
                 final_data = final_data.append({'time': pressure['time'][i],
                                                 'P/mmHg': pressure['pressure'][i],
-                                                'FMG': raw_FMG[6][j]},
-                                               ignore_index = True)
+                                                'FMG': raw_FMG[FMG_channel][j]},
+                                                ignore_index = True)
                 break
     return final_data
 
 
 if __name__ == "__main__":
     # 获得FMG-P数据
-    FMG_P_data = FMG_P_calibration(r"d:\code\data\iFMG_calibration\t1.db", r"d:\code\data\iFMG_calibration\t1.txt")
+    FMG_P_data = FMG_P_calibration(r"d:\code\data\iFMG_calibration\t3.db", r"d:\code\data\iFMG_calibration\t3.txt", 1)
     FMG = FMG_P_data['FMG'].values
     P1 = FMG_P_data['P/mmHg'].values
     # 读LCR数据system output vs LCR meter
-    LCR_data = Z_P_calibration(r"d:\code\data\iFMG_calibration\t4.xls", r"d:\code\data\iFMG_calibration\t4.txt")
+    LCR_data = Z_P_calibration(r"d:\code\data\iFMG_calibration\t6.xls", r"d:\code\data\iFMG_calibration\t6.txt")
     P2 = LCR_data['P/mmHg'].values
     Z = LCR_data['Z'].values
     R= LCR_data['Rs/kΩ'].values
@@ -125,8 +139,8 @@ if __name__ == "__main__":
     gen2 = 2**0.5
     cons_c = 1000*4095/(1248*3300)
     for i in range(max_LCR_index):
-        # j = (328444000/Z[i]) * 0.92665076    #310280136
-        j = (Rf*200/(gen2*Z[i]) + 1000)*cons_c
+        j = (328444000/Z[i]) * 0.92665076    #310280136
+        #j = (Rf*200/(gen2*Z[i]) + 1000)*cons_c
         cal_FMG.append(j)
 
     plt.figure()
@@ -137,7 +151,20 @@ if __name__ == "__main__":
     plt.xlabel("pressure (mmHg)")
     plt.ylabel("Z")
     plt.show()
+    
+    print("P1: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" )
+    for i in P1[0 : max_FMG_index]:
+        print(i)
 
-    
-    
+    print("FMG: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" )
+    for i in FMG[0 : max_FMG_index]:
+        print(i)
+        
+    print("P2: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" )
+    for i in P2[0 : max_LCR_index]:
+        print(i)
+        
+    print("LCR: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" )
+    for i in cal_FMG:
+        print(i)
     
