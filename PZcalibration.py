@@ -28,8 +28,7 @@ def read_pressure(file_path):
     
     newData.pop(0)#删除第一行txt列名
     P_data = pd.DataFrame(newData,
-                          columns = ["index", "date", "time", "pressure", "unit"],
-                          dtype = float)
+                          columns = ["index", "date", "time", "pressure", "unit"])
     return P_data
 
 def zip_signal(signal, fs):
@@ -54,7 +53,6 @@ def time_align(pandas_timestamp, shift_seconds):
     time_stamp = time.mktime(time.strptime(str(pandas_timestamp), "%Y-%m-%d %H:%M:%S")) + shift_seconds
     time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time_stamp))
     return time_str
-    
 
 
 def Z_P_calibration(Z_path, P_path):
@@ -69,7 +67,7 @@ def Z_P_calibration(Z_path, P_path):
             #若时间一致，挑出数据并储存
             # if pressure['time'][i] == str(impedance.loc[j][5]).split()[1]:
             # 加入修正项，避免LCR时间与handheld时间不同步导致数据异常，LCR时间-12秒
-            if pressure['time'][i] == time_align(impedance.loc[j][5], -12).split()[1]:
+            if pressure['time'][i] == time_align(impedance.loc[j][5], 0).split()[1]:
                 final_data = final_data.append({'time': pressure['time'][i],
                                                 'P/mmHg': pressure['pressure'][i],
                                                 'Cs/nF': impedance.loc[j][2],
@@ -132,8 +130,8 @@ if __name__ == "__main__":
     # FMG = FMG_P_data['FMG'].values
     # P1 = FMG_P_data['P/mmHg'].values
     # 读LCR数据system output vs LCR meter
-    LCR_data = Z_P_calibration(r"D:\LEARNINNNNNNNNNNNNG\实验数据\20220421\z20-3.xls", 
-                               r"D:\LEARNINNNNNNNNNNNNG\实验数据\20220421\p20-3.txt")
+    LCR_data = Z_P_calibration(r"D:\LEARNINNNNNNNNNNNNG\ExperimentData\20220621\C001-1.xls", 
+                               r"D:\LEARNINNNNNNNNNNNNG\ExperimentData\20220621\P001-1.txt")
     P2 = LCR_data['P/mmHg'].values
     C = LCR_data['Cs/nF'].values
     Z = LCR_data['Z'].values
