@@ -5,6 +5,9 @@ Created on Sat Nov 13 15:06:51 2021
 @author: WeimyMark
 
 用于处理气压计软件保存的 .txt 气压数据和 LCR meter保存的 excel, 并生成自动校准的数据
+
+需要注意保存的数据单位(nF)
+txt时间比系统正常时间晚12s
 """
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -13,7 +16,7 @@ import math
 import time
 
 def read_pressure(file_path):
-    # input: handheld气压计软件保存的txt数据
+    # input: handheld气压计软件保存的txt数据文件路径
     # output: air pressure data in dataframe
     with open(file_path) as f:
         data = f.readlines()
@@ -47,6 +50,13 @@ def zip_signal(signal, fs):
     return rsmp_sig, np.where(ave_sig == max(ave_sig))
 
 
+def time_align(pandas_timestamp, shift_seconds):
+    time_stamp = time.mktime(time.strptime(str(pandas_timestamp), "%Y-%m-%d %H:%M:%S")) + shift_seconds
+    time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time_stamp))
+    return time_str
+    
+
+
 def Z_P_calibration(Z_path, P_path):
     # 处理气压计txt数据和LCRmeter xlsx数据
     # 按照时间对应自动对齐，返回dataframe
@@ -57,12 +67,14 @@ def Z_P_calibration(Z_path, P_path):
     for i in range(0, pressure.shape[0]):
         for j in range(0, impedance.shape[0]):
             #若时间一致，挑出数据并储存
-            if pressure['time'][i] == str(impedance.loc[j][5]).split()[1]:
+            # if pressure['time'][i] == str(impedance.loc[j][5]).split()[1]:
+            # 加入修正项，避免LCR时间与handheld时间不同步导致数据异常，LCR时间-12秒
+            if pressure['time'][i] == time_align(impedance.loc[j][5], -12).split()[1]:
                 final_data = final_data.append({'time': pressure['time'][i],
                                                 'P/mmHg': pressure['pressure'][i],
-                                                'Cs/nF': impedance.loc[j][2]*1e12,
+                                                'Cs/nF': impedance.loc[j][2],
                                                 'Rs/kΩ': impedance.loc[j][3]*1e-3,
-                                                'Z': (impedance.loc[j][3]**2 + 1/(2*math.pi*1000*impedance.loc[j][2]*1e3)**2)**0.5},
+                                                'Z': (impedance.loc[j][3]**2 + 1/(2*math.pi*1000*impedance.loc[j][2]*1e-9)**2)**0.5},
                                                ignore_index = True)
     return final_data
 
@@ -116,55 +128,71 @@ def FMG_P_calibration(FMG_path, pressure_path, FMG_channel):
 
 if __name__ == "__main__":
     # 获得FMG-P数据
-    FMG_P_data = FMG_P_calibration(r"d:\code\data\iFMG_calibration\t3.db", r"d:\code\data\iFMG_calibration\t3.txt", 1)
-    FMG = FMG_P_data['FMG'].values
-    P1 = FMG_P_data['P/mmHg'].values
+    # FMG_P_data = FMG_P_calibration(r"d:\code\data\iFMG_calibration\t3.db", r"d:\code\data\iFMG_calibration\t3.txt", 1)
+    # FMG = FMG_P_data['FMG'].values
+    # P1 = FMG_P_data['P/mmHg'].values
     # 读LCR数据system output vs LCR meter
-    LCR_data = Z_P_calibration(r"d:\code\data\iFMG_calibration\t6.xls", r"d:\code\data\iFMG_calibration\t6.txt")
+    LCR_data = Z_P_calibration(r"D:\LEARNINNNNNNNNNNNNG\实验数据\20220421\z20-3.xls", 
+                               r"D:\LEARNINNNNNNNNNNNNG\实验数据\20220421\p20-3.txt")
     P2 = LCR_data['P/mmHg'].values
+    C = LCR_data['Cs/nF'].values
     Z = LCR_data['Z'].values
     R= LCR_data['Rs/kΩ'].values
 
     # 以下根据实际信号情况调整
 
-    max_FMG_index = np.where(P1 == max(P1))[0][0]
+    # max_FMG_index = np.where(P1 == max(P1))[0][0]
     max_LCR_index = np.where(P2 == max(P2))[0][0]
     
     # 用LCR meter测量值计算
     # 1KHz反馈阻抗328444
     # 直流反馈阻抗330000
     # 0.92665076 是传输前计算的比值0.9266U=output
-    cal_FMG = []
-    Rf = cal_z(330000, 2*math.pi*1000, 47e-12)
-    gen2 = 2**0.5
-    cons_c = 1000*4095/(1248*3300)
-    for i in range(max_LCR_index):
-        j = (328444000/Z[i]) * 0.92665076    #310280136
-        #j = (Rf*200/(gen2*Z[i]) + 1000)*cons_c
-        cal_FMG.append(j)
+    # cal_FMG = []
+    # Rf = cal_z(330000, 2*math.pi*1000, 47e-12)
+    # gen2 = 2**0.5
+    # cons_c = 1000*4095/(1248*3300)
+    # for i in range(max_LCR_index):
+    #     j = (328444000/Z[i]) * 0.92665076    #310280136
+    #     #j = (Rf*200/(gen2*Z[i]) + 1000)*cons_c
+    #     cal_FMG.append(j)
 
     plt.figure()
-    plt.plot(P2[0 : max_LCR_index], cal_FMG, label = "Z-->system output")
-    plt.plot(P1[0 : max_FMG_index], FMG[0 : max_FMG_index], label = "system output")
-    plt.legend(["Z-->system output", "system output"])
-    plt.title("Z-P")
+    plt.plot(P2[0 : max_LCR_index], C[0 : max_LCR_index], label = "C")
+    # plt.plot(P2[0 : max_LCR_index], Z[0 : max_LCR_index], label = "Z")
+    # plt.legend(["C", "Z"])
+    plt.title("C-P")
     plt.xlabel("pressure (mmHg)")
-    plt.ylabel("Z")
+    plt.ylabel("C (nF)")
     plt.show()
     
-    print("P1: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" )
-    for i in P1[0 : max_FMG_index]:
-        print(i)
+    # plt.figure()
+    # plt.plot(P2)
+    # plt.show()
+    # plt.figure()
+    # plt.plot(C)
+    # plt.show()
+    # plt.figure()
+    # plt.plot(Z)
+    # plt.show()
+    
+    # print("P1: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" )
+    # for i in P1[0 : max_FMG_index]:
+    #     print(i)
 
-    print("FMG: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" )
-    for i in FMG[0 : max_FMG_index]:
-        print(i)
+    # print("FMG: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" )
+    # for i in FMG[0 : max_FMG_index]:
+    #     print(i)
         
     print("P2: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" )
     for i in P2[0 : max_LCR_index]:
         print(i)
         
-    print("LCR: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" )
-    for i in cal_FMG:
+    print("Cs: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" )
+    for i in C[0 : max_LCR_index]:
+        print(i)
+        
+    print("Z: %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" )
+    for i in Z[0 : max_LCR_index]:
         print(i)
     
