@@ -80,6 +80,7 @@ def Z_P_calibration(Z_path, P_path, FMG_com_freq):
 
 def cal_z(R, w, C):
     # 并联电阻R和C计算阻抗绝对值
+    # w == 2*pi*f
     z = ((R/(1 + R**2 * w**2 * C**2))**2 + (R**2 * w * C/(1 + R**2 * w**2 * C**2))**2)**0.5
     return z
 
