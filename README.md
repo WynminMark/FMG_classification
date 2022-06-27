@@ -1,4 +1,3 @@
-
 # Function description
 - The calibration test of pressire sensors produces two files: excel file that contains electrical data, and txt file that contains pressure data
 - This code merges these two file based on time stamp

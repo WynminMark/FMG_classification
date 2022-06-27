@@ -14,7 +14,7 @@ if __name__ == '__main__':
             capacitance_file_path = file_path + '\\' + data_type['C'] + i + j + '.xls'
             pressure_file_path = file_path + '\\' + data_type['P'] + i + j + '.txt'
             print(capacitance_file_path)
-            temp_data = PZ.Z_P_calibration(capacitance_file_path, pressure_file_path)
+            temp_data = PZ.Z_P_calibration(capacitance_file_path, pressure_file_path, 1000)
             temp_data.to_excel(final_data_writter, sheet_name = i + j, index = True)
     final_data_writter.save()
     final_data_writter.close()

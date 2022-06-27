@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import math
 
 def read_pressure(file_path):
     # input: handheld气压计软件保存的txt数据文件路径
@@ -17,7 +18,7 @@ def read_pressure(file_path):
                           columns = ["index", "date", "time", "pressure", "unit"],
                           dtype = float)
     return P_data
-
+'''
 impedance = pd.read_excel(r"D:\LEARNINNNNNNNNNNNNG\实验数据\20220421\123.xls")
 pressure = read_pressure(r"D:\LEARNINNNNNNNNNNNNG\实验数据\20220421\p7-1.txt")
 final_data = pd.DataFrame()
@@ -25,4 +26,9 @@ final_data = pd.DataFrame()
 print(pressure['time'])
 print('******************************')
 print(str(impedance.loc[0][5]))
-
+'''
+if __name__ == '__main__':
+    R = 432000
+    C = 0.7e-9
+    Z = (R**2 + 1/(2*math.pi*1000*C)**2)**0.5
+    print(Z)

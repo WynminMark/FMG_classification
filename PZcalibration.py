@@ -55,9 +55,10 @@ def time_align(pandas_timestamp, shift_seconds):
     return time_str
 
 
-def Z_P_calibration(Z_path, P_path):
+def Z_P_calibration(Z_path, P_path, FMG_com_freq):
     # 处理气压计txt数据和LCRmeter xlsx数据
     # 按照时间对应自动对齐，返回dataframe
+    # FMG_com_freq为FMG传感器供电频率，计算阻抗时需要使用
     impedance = pd.read_excel(Z_path)
     pressure = read_pressure(P_path)
     final_data = pd.DataFrame()
@@ -72,7 +73,7 @@ def Z_P_calibration(Z_path, P_path):
                                                 'P/mmHg': pressure['pressure'][i],
                                                 'Cs/nF': impedance.loc[j][2],
                                                 'Rs/kΩ': impedance.loc[j][3]*1e-3,
-                                                'Z': (impedance.loc[j][3]**2 + 1/(2*math.pi*1000*impedance.loc[j][2]*1e-9)**2)**0.5},
+                                                'Z': (impedance.loc[j][3]**2 + 1/(2*math.pi*FMG_com_freq*impedance.loc[j][2]*1e-9)**2)**0.5},
                                                ignore_index = True)
     return final_data
 
