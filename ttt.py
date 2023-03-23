@@ -24,15 +24,7 @@ def cal_z(R, w, C):
     # w == 2*pi*f
     z = ((R/(1 + R**2 * w**2 * C**2))**2 + (R**2 * w * C/(1 + R**2 * w**2 * C**2))**2)**0.5
     return z
-'''
-impedance = pd.read_excel(r"D:\LEARNINNNNNNNNNNNNG\实验数据\20220421\123.xls")
-pressure = read_pressure(r"D:\LEARNINNNNNNNNNNNNG\实验数据\20220421\p7-1.txt")
-final_data = pd.DataFrame()
 
-print(pressure['time'])
-print('******************************')
-print(str(impedance.loc[0][5]))
-'''
 if __name__ == '__main__':
     '''
     R = 432000
@@ -40,4 +32,5 @@ if __name__ == '__main__':
     Z = (R**2 + 1/(2*math.pi*1000*C)**2)**0.5
     print(Z)
     '''
+    pressure = read_pressure(r"D:\LEARNINNNNNNNNNNNNG\实验数据\20220421\p7-1.txt")
     print(cal_z(330000, 2*math.pi*600, 47e-12))

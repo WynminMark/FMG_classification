@@ -11,27 +11,20 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 '''
-data = pz.Z_P_calibration("D:\code\data\Z_P\s3-6.xlsx", "D:\code\data\Z_P\s3-6.txt")
-
-P = data['P/mmHg'].values
-Z = data['Z'].values
-max_index = np.where(P == max(P))
-
-plt.figure()
-plt.plot(P[5:30], Z[5:30])
-plt.title("Z-P")
-plt.xlabel("pressure (mmHg)")
-plt.ylabel("Z")
-plt.show()
+由FMG穿戴式系统保存的.db文件和气压计文件，获得FMG-pressure数据
 '''
 
 def get_prss_timestamp(time_str):
+    """"""
     timeArray = time.strptime(time_str, "%m-%d-%Y %H:%M:%S")
     time_stamp = int(time.mktime(timeArray))
     return time_stamp
 
 
 def get_FMG_timestamp(time_str):
+    """
+    FMG输出.db文件中的time_str转时间戳
+    """
     timeArray = time.strptime(time_str, "%Y-%m-%d %H:%M:%S,%f")
     time_stamp = int(time.mktime(timeArray))
     return time_stamp
@@ -56,6 +49,7 @@ for i in range(pressure.shape[0]):
 for i in range(raw_FMG.shape[0]):
     FMG_timestamp_list.append(get_FMG_timestamp(raw_FMG[0][i]))
 
+# 对应FMG数值与气压值
 for i in range(pressure.shape[0]):
     for j in range(raw_FMG.shape[0]):
         if FMG_timestamp_list[j] == prss_timestamp_list[i] - 1:

@@ -6,7 +6,7 @@ Created on Sat Nov 13 15:06:51 2021
 
 用于处理气压计软件保存的 .txt 气压数据和 LCR meter保存的 excel, 并生成自动校准的数据
 
-需要注意保存的数据单位(nF)
+需要注意保存的数据单位(nF，Ω)
 txt时间比系统正常时间晚12s
 """
 import pandas as pd
