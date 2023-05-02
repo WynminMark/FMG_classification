@@ -29,6 +29,7 @@ def read_pressure(file_path):
     newData.pop(0)#删除第一行txt列名
     P_data = pd.DataFrame(newData,
                           columns = ["index", "date", "time", "pressure", "unit"])
+    P_data['pressure'] = P_data['pressure'].astype(np.float32)
     return P_data
 
 def zip_signal(signal, fs):
