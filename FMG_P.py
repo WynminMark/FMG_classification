@@ -37,11 +37,11 @@ def get_FMG_timestamp(time_str):
 
 def mean_FMG_1s(db_file_path, channel_num):
     """
-    根据时间戳计算每秒内FMG数据的平均值，用于与压力数据对应
-    输入：
+    * 根据时间戳计算每秒内FMG数据的平均值，用于与压力数据对应
+    * 输入：
         db_file_path: FMG数据存储文件
-        channel_num: 信号通道编号
-    输出：
+        channel_num: 数据通道编号，ch0是时间，ch1-8对应压力通道
+    * 输出：
         时间戳和FMG数据的dataframe
     """
     raw_FMG = pd.read_table(db_file_path,  sep = ';', header = None)
@@ -64,8 +64,10 @@ def mean_FMG_1s(db_file_path, channel_num):
         pass
     return result_dataframe
 
+
 def plate_func(P, r, t, h, D, C0, b):
     '''
+    用于curve_fit方法拟合方程中的参数，但是无法计算协方差？
     C = 0.5*pi*C0*(r - (64*D*h*(1 + 0.488*h^2/t^2)/P)^0.25)^2
     r, t: substrate layer
     h: thickness of space layer
@@ -74,6 +76,45 @@ def plate_func(P, r, t, h, D, C0, b):
     b: bias constant
     '''
     return C0*np.power((r - np.power(64*D*h*(1 + 0.488*np.power(h, 2)/np.power(t, 2))/P, 0.25)), 2) + b
+
+
+def form_FMG_P(db_file_path, pressure_file_path, FMG_channel = 1):
+    '''
+    * 读取FMG和pressure数据
+    '''
+    # 读取压力数据
+    pressure = PZ.read_pressure(pressure_file_path)
+    # 对每秒内的FMG数据取平均数，返回以秒为单位的时间戳和对应的FMG数据
+    FMG_mean = mean_FMG_1s(db_file_path, FMG_channel) # dataframe
+
+    # init result DataFrame
+    final_data = pd.DataFrame()
+
+    # 处理压力数据时间戳
+    prss_timestamp_list = []
+
+    for i in range(pressure.shape[0]):
+        prss_timestamp_list.append(get_prss_timestamp(pressure['date'][i] + " " + pressure['time'][i]))
+        pass
+
+
+
+    # 对应FMG数值与气压值
+    for i in range(pressure.shape[0]):
+        for j in range(FMG_mean.shape[0]):
+            if FMG_mean["time_stamp"][j] == prss_timestamp_list[i] - 1:
+                final_data = pd.concat([final_data, pd.DataFrame({'time': pressure['time'][i],
+                                                                'P/mmHg': pressure['pressure'][i],
+                                                                'FMG': FMG_mean["FMG"][j]}, index=[0])], ignore_index=True)
+                break
+
+    FMG = final_data['FMG'].values
+    P1 = final_data['P/mmHg'].values
+
+    max_FMG_index = np.where(P1 == max(P1))[0][0]
+
+    print(P1[0 : max_FMG_index], FMG[0 : max_FMG_index])
+    return
 
 
 if __name__ == '__main__':

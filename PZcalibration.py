@@ -16,8 +16,10 @@ import math
 import time
 
 def read_pressure(file_path):
-    # input: handheld气压计软件保存的txt数据文件路径
-    # output: air pressure data in dataframe
+    '''
+    * input: handheld气压计软件保存的txt数据文件路径
+    * output: air pressure data in dataframe
+    '''
     with open(file_path) as f:
         data = f.readlines()
     
