@@ -78,9 +78,14 @@ def plate_func(P, r, t, h, D, C0, b):
     return C0*np.power((r - np.power(64*D*h*(1 + 0.488*np.power(h, 2)/np.power(t, 2))/P, 0.25)), 2) + b
 
 
-def form_FMG_P(db_file_path, pressure_file_path, FMG_channel = 1):
+def form_FMG_P(db_file_path, pressure_file_path, FMG_channel = 1, time_bias = 0):
     '''
-    * 读取FMG和pressure数据
+    * 读取FMG和pressure数据，处理获得一次校准后的FMG-Pressure数据
+    * db_file_path
+    * pressure_file_path
+    * FMG_channel
+    * time_bias (second): FMG_time_stamp = pressure_time_stamp - time_bias
+    * OUTPUT: Pressure, FMG array
     '''
     # 读取压力数据
     pressure = PZ.read_pressure(pressure_file_path)
@@ -97,12 +102,10 @@ def form_FMG_P(db_file_path, pressure_file_path, FMG_channel = 1):
         prss_timestamp_list.append(get_prss_timestamp(pressure['date'][i] + " " + pressure['time'][i]))
         pass
 
-
-
     # 对应FMG数值与气压值
     for i in range(pressure.shape[0]):
         for j in range(FMG_mean.shape[0]):
-            if FMG_mean["time_stamp"][j] == prss_timestamp_list[i] - 1:
+            if FMG_mean["time_stamp"][j] == prss_timestamp_list[i] - time_bias:
                 final_data = pd.concat([final_data, pd.DataFrame({'time': pressure['time'][i],
                                                                 'P/mmHg': pressure['pressure'][i],
                                                                 'FMG': FMG_mean["FMG"][j]}, index=[0])], ignore_index=True)
@@ -113,8 +116,7 @@ def form_FMG_P(db_file_path, pressure_file_path, FMG_channel = 1):
 
     max_FMG_index = np.where(P1 == max(P1))[0][0]
 
-    print(P1[0 : max_FMG_index], FMG[0 : max_FMG_index])
-    return
+    return P1[0 : max_FMG_index], FMG[0 : max_FMG_index]
 
 
 if __name__ == '__main__':
