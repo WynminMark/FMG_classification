@@ -5,11 +5,12 @@ Created on Mon Nov 15 16:11:01 2021
 @author: WeimyMark
 """
 import PZcalibration as PZ
+
 import time
-import math
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import pylab
 
 '''
 由FMG穿戴式系统保存的.db文件和气压计文件，获得FMG-pressure数据
@@ -117,6 +118,75 @@ def form_FMG_P(db_file_path, pressure_file_path, FMG_channel = 1, time_bias = 0)
     max_FMG_index = np.where(P1 == max(P1))[0][0]
 
     return P1[0 : max_FMG_index], FMG[0 : max_FMG_index]
+
+
+class FMG2pressure():
+    def __init__(self, FMG_channel = 1, time_bias = 0, **file_path):
+        '''
+        * 调用form_FMG_P()
+        * file_path: [FMG.db, pressure.txt]...
+        '''
+        # 初始化列表用于存储几次校准数据
+        original_pressure_list = []
+        original_FMG_list = []
+        for f_name in file_path.values():
+            temp_p, temp_FMG = form_FMG_P(f_name[0], f_name[1], FMG_channel, time_bias)
+            original_pressure_list.append(temp_p)
+            original_FMG_list.append(temp_FMG)
+            pass
+        # 合并几次校准的原始数据
+        self.original_P = np.hstack(original_pressure_list)
+        self.original_FMG = np.hstack(original_FMG_list)
+        # 存储文件路径
+        self.file_path_dict = file_path
+        pass
+
+    def show_original(self):
+        """
+        * 显示校准散点图，删除异常数值
+        """
+        plt.figure()
+        plt.scatter(self.original_FMG, self.original_P, label = "calibration output")
+        plt.title("Pressure--FMG")
+        plt.xlabel("FMG output")
+        plt.ylabel("Pressure")
+        plt.show()
+        pass
+
+    def get_fit_curve(self, deg = 3):
+        '''
+        * 获得多项式拟合方程，显示拟合曲线
+        * deg: 方程最高次数
+        * self.fit_equation(x)可以获得数据 x 对应的 pressure 值
+        '''
+        # 曲线拟合，返回值为多项式的各项系数
+        fit_coefficients = np.polyfit(self.original_FMG, self.original_P, deg)
+        # 返回值为多项式的表达式，也就是函数式子
+        self.fit_equation = np.poly1d(fit_coefficients)
+        # 根据函数的多项式表达式，求解 y
+        y_pred = self.fit_equation(self.original_FMG)
+        # print(np.polyval(p1, 29))             根据多项式求解特定 x 对应的 y 值
+        # print(np.polyval(z1, 29))             根据多项式求解特定 x 对应的 y 值
+
+        # 对拟合曲线的数据进行排序，避免画出多条曲线
+        fit_curve_df = pd.DataFrame({'x': self.original_FMG, 'y': y_pred})
+        sort_fit_curve_df = fit_curve_df.sort_values(by = "y")
+
+        plot1 = pylab.plot(self.original_FMG, self.original_P, '*', label='original values')
+        plot2 = pylab.plot(sort_fit_curve_df['x'], sort_fit_curve_df['y'], 'r', label='fit values')
+        pylab.title('')
+        pylab.xlabel('')
+        pylab.ylabel('')
+        pylab.legend(loc=3, borderaxespad=0., bbox_to_anchor=(0.65, 0.05))
+        pylab.show()
+        pass
+
+    def get_pressure_unit(self):
+        pressure = PZ.read_pressure(list(self.file_path_dict.values())[0][1])   # 取第一个[.db, .txt]中的.txt
+        return pressure['unit'].values[0]
+
+    # end class
+    pass
 
 
 if __name__ == '__main__':
