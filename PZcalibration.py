@@ -58,7 +58,7 @@ def time_align(pandas_timestamp, shift_seconds):
     return time_str
 
 
-def Z_P_calibration(Z_path, P_path, FMG_com_freq):
+def Z_P_calibration(Z_path, P_path, FMG_com_freq = 1000):
     # 处理气压计txt数据和LCRmeter xlsx数据
     # 按照时间对应自动对齐，返回dataframe
     # FMG_com_freq为FMG传感器供电频率，计算阻抗时需要使用

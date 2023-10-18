@@ -175,8 +175,8 @@ class FMG2pressure():
         plot1 = pylab.plot(self.original_FMG, self.original_P, '*', label='original values')
         plot2 = pylab.plot(sort_fit_curve_df['x'], sort_fit_curve_df['y'], 'r', label='fit values')
         pylab.title('')
-        pylab.xlabel('')
-        pylab.ylabel('')
+        pylab.xlabel('FMG output')
+        pylab.ylabel('Pressure (mmHg)')
         pylab.legend(loc=3, borderaxespad=0., bbox_to_anchor=(0.65, 0.05))
         pylab.show()
         pass
