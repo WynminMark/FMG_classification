@@ -37,14 +37,16 @@ def get_FMG_timestamp(time_str):
 
 
 def mean_FMG_1s(db_file_path, channel_num):
-    """
-    * 根据时间戳计算每秒内FMG数据的平均值，用于与压力数据对应
-    * 输入：
-        db_file_path: FMG数据存储文件
-        channel_num: 数据通道编号，ch0是时间，ch1-8对应压力通道
-    * 输出：
+    '''
+    根据时间戳计算每秒内FMG数据的平均值，用于与压力数据对应
+    # Input Params:
+    ------
+        * `db_file_path`: FMG数据存储文件
+        * `channel_num`: 数据通道编号，ch0是时间，ch1-8对应压力通道
+    # Output:
+    ------
         时间戳和FMG数据的dataframe
-    """
+    '''
     raw_FMG = pd.read_table(db_file_path,  sep = ';', header = None)
     # 转换时间戳，精度为秒
     FMG_timestamp_list = []
@@ -60,7 +62,13 @@ def mean_FMG_1s(db_file_path, channel_num):
     max_stamp = FMG_timestamp_list[-1]
     for i in range(min_stamp, max_stamp+1, 1):
         temp_data = raw_FMG[channel_num].values[time_stamp_array == i]
-        temp_mean_FMG = sum(temp_data)/len(temp_data)
+        try:
+            temp_mean_FMG = sum(temp_data)/len(temp_data)
+        except ZeroDivisionError:
+            formatted_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(i))
+            print(f"Exception! file: {db_file_path}, time: {formatted_time}, divided by 0!")
+            temp_mean_FMG = np.NaN
+            pass
         result_dataframe = pd.concat([result_dataframe, pd.DataFrame({"time_stamp": i, "FMG": temp_mean_FMG}, index=[0])], ignore_index=True)
         pass
     return result_dataframe
@@ -81,12 +89,16 @@ def plate_func(P, r, t, h, D, C0, b):
 
 def form_FMG_P(db_file_path, pressure_file_path, FMG_channel = 1, time_bias = 0):
     '''
-    * 读取FMG和pressure数据，处理获得一次校准后的FMG-Pressure数据
-    * db_file_path
-    * pressure_file_path
-    * FMG_channel
-    * time_bias (second): FMG_time_stamp = pressure_time_stamp - time_bias
-    * OUTPUT: Pressure, FMG array
+    读取FMG和pressure数据文件，获得一次校准后的FMG-Pressure数据
+    # Input Params:
+    ------
+        * `db_file_path`
+        * `pressure_file_path`
+        * `FMG_channel`
+        * `time_bias` (second): FMG_time_stamp = pressure_time_stamp - time_bias
+    # OUTPUT:
+    ------
+        * `Pressure array, FMG array`
     '''
     # 读取压力数据
     pressure = PZ.read_pressure(pressure_file_path)
@@ -124,7 +136,12 @@ class FMG2pressure():
     def __init__(self, FMG_channel = 1, time_bias = 0, **file_path):
         '''
         * 调用form_FMG_P()
-        * file_path: [FMG.db, pressure.txt]...
+
+        # Input Params:
+        --------
+            * `FMG_channel`: 校准FMG数据所在通道数
+            * `time_bias`: 通常是0，用于消除两个电脑系统时间差（p电脑-FMG电脑：time_bias = pressure_time_stamp - FMG_time_stamp）
+            * `file_path`: [FMG.db, pressure.txt]...
         '''
         # 初始化列表用于存储几次校准数据
         original_pressure_list = []
