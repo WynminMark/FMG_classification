@@ -11,6 +11,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import pylab
+import logging
 
 '''
 由FMG穿戴式系统保存的.db文件和气压计文件，获得FMG-pressure数据
@@ -89,7 +90,7 @@ def plate_func(P, r, t, h, D, C0, b):
 
 def form_FMG_P(db_file_path, pressure_file_path, FMG_channel = 1, time_bias = 0):
     '''
-    读取FMG和pressure数据文件，获得一次校准后的FMG-Pressure数据
+    读取FMG和pressure数据文件，获得一次校准后的每秒对应的FMG-Pressure数据
     # Input Params:
     ------
         * `db_file_path`
@@ -160,7 +161,7 @@ class FMG2pressure():
 
     def show_original(self):
         """
-        * 显示校准散点图，删除异常数值
+        * 显示校准散点图，未删除异常数值
         """
         plt.figure()
         plt.scatter(self.original_FMG, self.original_P, label = "calibration output")
@@ -176,18 +177,27 @@ class FMG2pressure():
         * deg: 方程最高次数
         * self.fit_equation(x)可以获得数据 x 对应的 pressure 值
         '''
+        original_df = pd.DataFrame({'FMG': self.original_FMG, 'pressure': self.original_P}).sort_values(by = 'FMG')
+        
         # 曲线拟合，返回值为多项式的各项系数
-        fit_coefficients = np.polyfit(self.original_FMG, self.original_P, deg)
+        fit_coefficients = np.polyfit(original_df['FMG'].values, original_df['pressure'].values, deg)
+        # fit_coefficients = np.polyfit(self.original_FMG, self.original_P, deg)
+
         # 返回值为多项式的表达式，也就是函数式子
         self.fit_equation = np.poly1d(fit_coefficients)
         # 根据函数的多项式表达式，求解 y
-        y_pred = self.fit_equation(self.original_FMG)
+        # y_pred = self.fit_equation(self.original_FMG)
+        x_in = list(range(int(min(self.original_FMG)), int(max(self.original_FMG))))
+        y_pred = self.fit_equation(x_in)
+        fit_curve_df = pd.DataFrame({'x': x_in, 'y': y_pred})
         # print(np.polyval(p1, 29))             根据多项式求解特定 x 对应的 y 值
         # print(np.polyval(z1, 29))             根据多项式求解特定 x 对应的 y 值
 
         # 对拟合曲线的数据进行排序，避免画出多条曲线
-        fit_curve_df = pd.DataFrame({'x': self.original_FMG, 'y': y_pred})
-        sort_fit_curve_df = fit_curve_df.sort_values(by = "y")
+        # fit_curve_df = pd.DataFrame({'x': self.original_FMG, 'y': y_pred})
+        sort_fit_curve_df = fit_curve_df.sort_values(by = "x")
+        # 输出拟合数据到log文件用于debug
+        logging.info(f"sort_fit_curve_df 已输出至csv:\n{sort_fit_curve_df.to_csv('./logs/df.csv', index=False)}")
 
         plot1 = pylab.plot(self.original_FMG, self.original_P, '*', label='original values')
         plot2 = pylab.plot(sort_fit_curve_df['x'], sort_fit_curve_df['y'], 'r', label='fit values')
