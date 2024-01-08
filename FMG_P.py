@@ -65,13 +65,13 @@ def mean_FMG_1s(db_file_path, channel_num):
         temp_data = raw_FMG[channel_num].values[time_stamp_array == i]
         try:
             temp_mean_FMG = sum(temp_data)/len(temp_data)
+            result_dataframe = pd.concat([result_dataframe, pd.DataFrame({"time_stamp": i, "FMG": temp_mean_FMG}, index=[0])], ignore_index=True)
         except ZeroDivisionError:
             formatted_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(i))
             print(f"Exception! file: {db_file_path}, time: {formatted_time}, divided by 0!")
-            temp_mean_FMG = np.NaN
             pass
-        result_dataframe = pd.concat([result_dataframe, pd.DataFrame({"time_stamp": i, "FMG": temp_mean_FMG}, index=[0])], ignore_index=True)
         pass
+
     return result_dataframe
 
 
@@ -134,6 +134,9 @@ def form_FMG_P(db_file_path, pressure_file_path, FMG_channel = 1, time_bias = 0)
 
 
 class FMG2pressure():
+    '''
+    '''
+    
     def __init__(self, FMG_channel = 1, time_bias = 0, **file_path):
         '''
         * 调用form_FMG_P()
@@ -160,11 +163,11 @@ class FMG2pressure():
         pass
 
     def show_original(self):
-        """
+        '''
         * 显示校准散点图，未删除异常数值
-        """
+        '''
         plt.figure()
-        plt.scatter(self.original_FMG, self.original_P, label = "calibration output")
+        plt.scatter(self.original_P, self.original_FMG, label = "calibration output")
         plt.title("Pressure--FMG")
         plt.xlabel("FMG output")
         plt.ylabel("Pressure")
@@ -196,6 +199,7 @@ class FMG2pressure():
         # 对拟合曲线的数据进行排序，避免画出多条曲线
         # fit_curve_df = pd.DataFrame({'x': self.original_FMG, 'y': y_pred})
         sort_fit_curve_df = fit_curve_df.sort_values(by = "x")
+        
         # 输出拟合数据到log文件用于debug
         logging.info(f"sort_fit_curve_df 已输出至csv:\n{sort_fit_curve_df.to_csv('./logs/df.csv', index=False)}")
 
@@ -209,6 +213,10 @@ class FMG2pressure():
         pass
 
     def get_pressure_unit(self):
+        '''
+        获得txt压力数据的单位
+        e.g. mmHg, cmH2O
+        '''
         pressure = PZ.read_pressure(list(self.file_path_dict.values())[0][1])   # 取第一个[.db, .txt]中的.txt
         return pressure['unit'].values[0]
 
